@@ -1,0 +1,11 @@
+{
+  "namespace": "sappykun",
+  "name": "SpawnPoolControl",
+  "description": "Complete control over item spawns in PEAK.",
+  "version_number": "0.0.1",
+  "dependencies": [
+    "BepInEx-BepInExPack_PEAK-5.4.2403"
+  ],
+  "website_url": "https://github.com/sappykun/PEAK-SpawnPoolControl",
+  "FullName": "sappykun-SpawnPoolControl"
+}
