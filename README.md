@@ -12,6 +12,10 @@ This mod only contains one config option:
 
 This will load a JSON file from `BepinEx/configs/SpawnPoolControl/something.json`, which will dictate how items are spawned.
 
+**This config option is blank by default and will need to be set manually.** Run the game once to generate the config, then set the value to the name of your file.
+
+---
+
 <details>
   <summary>Click to see an example of a config file</summary>
 
@@ -76,6 +80,8 @@ In this particular example:
 - The pink conch shells on Shore will be replaced by dynamite, which explodes if you get near.
 
 </details>
+
+---
 
 Whenever you launch the game, the mod will generate `_reference.json` in the above folder. It is a raw dump of all items and their respective spawn pools. This will include any modded items.
 You generally will have to launch the game once to generate the file, find the IDs of whichever items you want to tweak, then construct your own custom file.
