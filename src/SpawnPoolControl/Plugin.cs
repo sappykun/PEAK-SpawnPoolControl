@@ -6,9 +6,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using Zorro.Core;
-
 
 [BepInPlugin("sappykun.PEAK_SpawnPoolControl", "PEAK Spawn Pool Control", "0.2.0")]
 public class SpawnPoolControlPlugin : BaseUnityPlugin
@@ -50,37 +48,37 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 	[HarmonyPatch(typeof(LootData))]
 	public static class LootData_PopulateLootData_Patch
 	{
-        [HarmonyPostfix]
-        [HarmonyPatch("PopulateLootData")]
+		[HarmonyPostfix]
+		[HarmonyPatch("PopulateLootData")]
 		public static void Postfix()
 		{
 			if (referencePool == null) { return; }
 			if (currentPool?.SpawnPoolItems == null) { return; }
 
 			if (currentPool.ClearDefaultWeights)
-            {
-	 			LootData.AllSpawnWeightData = new Dictionary<SpawnPool, Dictionary<ushort, int>>();               
-            }
+			{
+	 			LootData.AllSpawnWeightData = new Dictionary<SpawnPool, Dictionary<ushort, int>>();
+			}
 
 			foreach (var spawnPoolItem in currentPool.SpawnPoolItems)
 			{
 				foreach (var pool in spawnPoolItem.Value)
-                {
+				{
 					if (Enum.TryParse(pool.Key, out SpawnPool spawnPool))
-                    {
+					{
 						if (itemNameReverseLUT.TryGetValue(spawnPoolItem.Key, out var itemID))
 						{
 							LootData.AllSpawnWeightData.TryAdd(spawnPool, new Dictionary<ushort, int>()); 
 							LootData.AllSpawnWeightData[spawnPool][itemID] = pool.Value;
 						}
-                    }
-                }
+					}
+				}
 			}
 
 		}
 	}
 	private static void GenerateReferenceConfig()
-    {
+	{
 		if (referencePool != null) { return; }
 
 		itemNameReverseLUT = new Dictionary<string, ushort>();
@@ -116,7 +114,7 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 		}
 
 		JsonHandler.Save(referencePool, "_reference");
-    }
+	}
 
 	[HarmonyPatch(typeof(LootData), "GetRandomItems")]
 	public static class Patch_GetRandomItems
@@ -124,18 +122,18 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 		static void Prefix(ref bool canRepeat)
 		{
 			if (currentPool != null && currentPool.ForceAllowDuplicates)
-            {
+			{
 	 			canRepeat = true;
-            }
+			}
 		}
 	}
 
 	[HarmonyPatch(typeof(BerryVine))]
-    public class BerryVinePatch
-    {
-        [HarmonyPrefix]
-        [HarmonyPatch("SpawnItems", typeof(List<Transform>))]
-        public static void SpawnItemsPrefix(BerryVine __instance, List<Transform> spawnSpots, Vector2 __state)
+	public class BerryVinePatch
+	{
+		[HarmonyPrefix]
+		[HarmonyPatch("SpawnItems", typeof(List<Transform>))]
+		public static void SpawnItemsPrefix(BerryVine __instance, List<Transform> spawnSpots, Vector2 __state)
 		{
 			if (currentPool?.SpawnPoolItems == null)
 				return;
@@ -152,7 +150,7 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 						if (SpawnPoolControlPlugin.currentPool.ClearDefaultWeights)
 						{
 							__instance.spawns = new SpawnList();
-							__instance.spawns.items = new List<SpawnEntry>();               
+							__instance.spawns.items = new List<SpawnEntry>(); 
 						}
 
 						if (ItemDatabase.TryGetItem(SpawnPoolControlPlugin.itemNameReverseLUT[spawnPoolItem.Key], out var item))
@@ -165,16 +163,16 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 					}
 				}
 			}
-        }
-    }
+		}
+	}
 	
 	// Governs mushroom spawns, including the ShroomBerry spawns.
 	[HarmonyPatch(typeof(GroundPlaceSpawner))]
-    public class GroundPlaceSpawnerPatch
-    {
-        [HarmonyPrefix]
-        [HarmonyPatch("SpawnItems", typeof(List<Transform>))]
-        public static void SpawnItemsPrefix(GroundPlaceSpawner __instance, List<Transform> spawnSpots)
+	public class GroundPlaceSpawnerPatch
+	{
+		[HarmonyPrefix]
+		[HarmonyPatch("SpawnItems", typeof(List<Transform>))]
+		public static void SpawnItemsPrefix(GroundPlaceSpawner __instance, List<Transform> spawnSpots)
 		{
 			if (currentPool?.SpawnPoolItems == null)
 				return;
@@ -191,7 +189,7 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 						if (SpawnPoolControlPlugin.currentPool.ClearDefaultWeights)
 						{
 							__instance.spawns = new SpawnList();
-							__instance.spawns.items = new List<SpawnEntry>();               
+							__instance.spawns.items = new List<SpawnEntry>(); 
 						}
 
 						if (ItemDatabase.TryGetItem(SpawnPoolControlPlugin.itemNameReverseLUT[spawnPoolItem.Key], out var item))
@@ -204,20 +202,20 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 					}
 				}
 			}
-        }
-    }
+		}
+	}
 
 	// Handles a bunch of single item spawns, such as:
 	// 	- remedy shroom/shelf fungus/magic beans
 	//  - item spawns on beach (airplane crash stuff, shells)
 	//  - backpacks
-	// 	- dynamite/scorpion spawns  
+	//  - dynamite/scorpion spawns
 	[HarmonyPatch(typeof(SingleItemSpawner))]
-    public class SingleItemSpawnerPatch
-    {
-        [HarmonyPrefix]
-        [HarmonyPatch("TrySpawnItems")]
-        public static bool TrySpawnItemsPrefix(SingleItemSpawner __instance)
+	public class SingleItemSpawnerPatch
+	{
+		[HarmonyPrefix]
+		[HarmonyPatch("TrySpawnItems")]
+		public static bool TrySpawnItemsPrefix(SingleItemSpawner __instance)
 		{
 			if (currentPool?.SpawnPoolReplacements == null)
 				return true;
@@ -230,10 +228,10 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 			}
 
 			return true;
-        }
-    }
+		}
+	}
 
-    // Technically governs any kind of Spawner, which really only includes the scroll
+	// Technically governs any kind of Spawner, which really only includes the scroll
 	// at the first three campfires. Luggages are technically Spawners too, but
 	// we exclude them here.
 	[HarmonyPatch(typeof(Spawner), "GetObjectsToSpawn")]
@@ -254,18 +252,6 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 					__result[i] = newItem.gameObject;
 				}
 			}
-		}
-	}
-
-	// Technically governs any kind of Spawner, which really only includes the scroll
-	// at the first three campfires. Luggages are technically Spawners too, but
-	// we exclude them here. 
-	[HarmonyPatch(typeof(MapHandler), "GoToSegment")]
-	public static class MapHandlerPatch
-	{	
-		private static void Prefix(MapHandler __instance)
-		{
-			Log?.LogInfo("MapHandler.GoToSegment: " + __instance.currentSegment);
 		}
 	}
 } 
