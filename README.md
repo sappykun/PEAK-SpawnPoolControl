@@ -46,7 +46,7 @@ This will load a JSON file from `BepinEx/configs/SpawnPoolControl/something.json
       "Campfire": 100
     },
     "Napberry": {
-      "SpawnControl_Vine": 1
+      "SpawnControl_Vine": 1,
       "SpawnControl_MushroomCluster": 1
     },
     "Megaphone": {

@@ -6,11 +6,11 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 using UnityEngine;
-
+using UnityEngine.SceneManagement;
 using Zorro.Core;
 
 
-[BepInPlugin("sappykun.PEAK_SpawnPoolControl", "PEAK Spawn Pool Control", "0.1.0")]
+[BepInPlugin("sappykun.PEAK_SpawnPoolControl", "PEAK Spawn Pool Control", "0.2.0")]
 public class SpawnPoolControlPlugin : BaseUnityPlugin
 {
 
@@ -20,21 +20,20 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 
 	internal static Dictionary<string, ushort> itemNameReverseLUT = new Dictionary<string, ushort>(); 
 
-	private ConfigEntry<string> currentPoolName;
+	private ConfigEntry<string>? currentPoolName;
 
 	private void Awake()
 	{
 		Harmony val = new Harmony("sappykun.PEAK_SpawnPoolControl");
 		val.PatchAll();
 		Log = Logger;
-		Log.LogInfo("Plugin sappykun.PEAK_SpawnPoolControl is loaded!");
+		Log?.LogInfo("Plugin sappykun.PEAK_SpawnPoolControl is loaded!");
 
 		currentPoolName = Config.Bind<string>("General", "ConfigName", "", "Name of JSON config file to load (without extensions).");
 		currentPoolName.SettingChanged += delegate
 		{
 			currentPool = JsonHandler.Load(currentPoolName.Value);
 			LootData.PopulateLootData();
-			Log.LogInfo("Updated pools from config: " + currentPoolName.Value + ".json");
 		};
 	}
 
@@ -42,12 +41,10 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 	{
 		GenerateReferenceConfig();
 
-		if (currentPoolName.Value != "")
-        {
-            currentPool = JsonHandler.Load(currentPoolName.Value);
-			
-			LootData.PopulateLootData();
-        }
+		if (currentPoolName == null || currentPoolName.Value == "") { return; }
+
+		currentPool = JsonHandler.Load(currentPoolName.Value);
+		LootData.PopulateLootData();
 	}
 
 	[HarmonyPatch(typeof(LootData))]
@@ -149,6 +146,9 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 				{
 					if (Enum.TryParse(pool.Key, out CustomSpawnPool_Vine spawnPool))
 					{
+						if (!BiomeChecker.CheckBiome(spawnPool))
+							continue;
+
 						if (SpawnPoolControlPlugin.currentPool.ClearDefaultWeights)
 						{
 							__instance.spawns = new SpawnList();
@@ -185,6 +185,9 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
 				{
 					if (Enum.TryParse(pool.Key, out CustomSpawnPool_MushroomCluster spawnPool))
 					{
+						if (!BiomeChecker.CheckBiome(spawnPool))
+							continue;
+
 						if (SpawnPoolControlPlugin.currentPool.ClearDefaultWeights)
 						{
 							__instance.spawns = new SpawnList();
@@ -214,23 +217,76 @@ public class SpawnPoolControlPlugin : BaseUnityPlugin
     {
         [HarmonyPrefix]
         [HarmonyPatch("TrySpawnItems")]
-        public static void TrySpawnItemsPrefix(SingleItemSpawner __instance)
+        public static bool TrySpawnItemsPrefix(SingleItemSpawner __instance)
 		{
-			if (currentPool == null || currentPool.SpawnPoolReplacements == null)
-				return;
+			if (currentPool?.SpawnPoolReplacements == null)
+				return true;
 
-			foreach (var replacement in currentPool.SpawnPoolReplacements)
+			if (currentPool.SpawnPoolReplacements.TryGetValue(__instance.prefab.name, out string value) &&
+				itemNameReverseLUT.TryGetValue(value, out var newItemID) &&
+				ItemDatabase.TryGetItem(newItemID, out var newItem))
 			{
-				if (itemNameReverseLUT.ContainsKey(replacement.Key) &&
-					itemNameReverseLUT.TryGetValue(replacement.Value, out var newItemID) &&
-					ItemDatabase.TryGetItem(newItemID, out var newItem))
-				{
-					if (__instance.prefab.name == replacement.Key)
-					{
-						__instance.prefab = newItem.gameObject;
-					}
-				}
+				__instance.prefab = newItem.gameObject;
 			}
+
+			return true;
         }
     }
+
+    // Technically governs any kind of Spawner, which really only includes the scroll
+	// at the first three campfires. Luggages are technically Spawners too, but
+	// we exclude them here.
+	[HarmonyPatch(typeof(Spawner), "GetObjectsToSpawn")]
+	public static class SpawnerPatch
+	{	
+		private static void Postfix(Spawner __instance, ref List<GameObject> __result)
+		{
+			if (__instance.GetType().FullName != "Spawner") { return; }
+			if (currentPool?.SpawnPoolReplacements == null) { return; }
+
+			for (int i = 0; i < __result.Count; i++)
+			{
+				if (currentPool.SpawnPoolReplacements.TryGetValue(__result[i].name, out string value) &&
+					itemNameReverseLUT.ContainsKey(__result[i].name) &&
+					itemNameReverseLUT.TryGetValue(value, out var newItemID) &&
+					ItemDatabase.TryGetItem(newItemID, out var newItem))
+				{
+					__result[i] = newItem.gameObject;
+				}
+			}
+		}
+	}
+
+	// Technically governs any kind of Spawner, which really only includes the scroll
+	// at the first three campfires. Luggages are technically Spawners too, but
+	// we exclude them here. 
+	[HarmonyPatch(typeof(MapHandler), "GoToSegment")]
+	public static class MapHandlerPatch
+	{	
+		private static void Prefix(MapHandler __instance)
+		{
+			Log?.LogInfo("MapHandler.GoToSegment: " + __instance.currentSegment);
+		}
+	}
+} 
+
+public class BiomeChecker
+{
+	public static bool CheckBiome<TEnum>(TEnum pool)
+	{
+		int currentSegment = Singleton<MapHandler>.Instance.currentSegment;
+		int currentBiome = (int)Singleton<MapHandler>.Instance.segments[currentSegment].biome;
+
+		int value = Convert.ToInt32(pool);
+
+		if (Convert.ToInt32(value) < 0)
+		{
+			SpawnPoolControlPlugin.Log?.LogInfo("Using global override for pool type " + typeof(TEnum).Name);
+			return true;
+		}
+
+		SpawnPoolControlPlugin.Log?.LogDebug($"BiomeChecker: checking value {value} versus current biome {currentBiome}");
+
+		return Convert.ToInt32(value) == currentBiome;
+	}
 }

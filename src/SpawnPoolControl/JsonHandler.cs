@@ -25,10 +25,10 @@ class JsonHandler
     {
         try
         {
-            SpawnPoolControlPlugin.Log.LogInfo("Creating folder");
+            SpawnPoolControlPlugin.Log?.LogInfo("Creating folder");
             string configFolder = Path.Combine(Paths.ConfigPath, "SpawnPoolControl");
             Directory.CreateDirectory(configFolder);
-            SpawnPoolControlPlugin.Log.LogInfo("Created folder");
+            SpawnPoolControlPlugin.Log?.LogInfo("Created folder");
 
             string outputFullPath = Path.Combine(configFolder, configName + ".json");
             string outputJson = JsonConvert.SerializeObject(
@@ -36,18 +36,18 @@ class JsonHandler
                 Formatting.Indented
             );
 
-            SpawnPoolControlPlugin.Log.LogInfo("Writing file...");
+            SpawnPoolControlPlugin.Log?.LogInfo("Writing file...");
             File.WriteAllText(outputFullPath, outputJson);
 
-            SpawnPoolControlPlugin.Log.LogInfo($"Saved JSON to: {outputFullPath}");
+            SpawnPoolControlPlugin.Log?.LogInfo($"Saved JSON to: {outputFullPath}");
         }
         catch (Exception ex)
         {
-            SpawnPoolControlPlugin.Log.LogWarning("Error: " + ex.Message);
+            SpawnPoolControlPlugin.Log?.LogWarning("Error: " + ex.Message);
         }
     }
 
-    public static SpawnPoolConfig Load(string configName)
+    public static SpawnPoolConfig? Load(string configName)
     {
         try
         {
@@ -56,16 +56,18 @@ class JsonHandler
 
             if (!File.Exists(path))
             {
-                SpawnPoolControlPlugin.Log.LogWarning("Config not found: " + path);
+                SpawnPoolControlPlugin.Log?.LogWarning("Config not found: " + path);
                 return null;
             }
 
             string json = File.ReadAllText(path);
-            return JsonConvert.DeserializeObject<SpawnPoolConfig>(json);
+            SpawnPoolConfig? ret = JsonConvert.DeserializeObject<SpawnPoolConfig>(json);
+            SpawnPoolControlPlugin.Log?.LogInfo("Updated pools from config: " + configName + ".json");
+            return ret;
         }
         catch (Exception ex)
         {
-            SpawnPoolControlPlugin.Log.LogError("Error loading JSON: " + ex.Message);
+            SpawnPoolControlPlugin.Log?.LogError("Error loading JSON: " + ex.Message);
             return null;
         }
     }
