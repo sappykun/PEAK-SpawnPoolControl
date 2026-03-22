@@ -1,3 +1,5 @@
+*this one's for you, jill*
+
 # Spawn Pool Control
 
 This mod provides a very powerful way of modifying Peak's spawn pools.  It supports all modded items and _should be_ resilient to game updates, including new biomes, items, and potential spawn pools.
